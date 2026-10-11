@@ -17,13 +17,13 @@ type Storage interface {
 	ListPolicies(ctx context.Context, name string) ([]*models.ScalingPolicy, error)
 	DeletePolicy(ctx context.Context, id string) error
 
-	CreateScheduleAction(ctx context.Context, action *models.ScheduledAction) error
-	GetScheduleAction(ctx context.Context, id string) (*models.ScheduledAction, error)
-	ListScheduleActions(ctx context.Context, name string) ([]*models.ScheduledAction, error)
-	DeleteScheduleAction(ctx context.Context, id string) error
+	CreateScheduledAction(ctx context.Context, action *models.ScheduledAction) error
+	GetScheduledAction(ctx context.Context, id string) (*models.ScheduledAction, error)
+	ListScheduledActions(ctx context.Context, name string) ([]*models.ScheduledAction, error)
+	DeleteScheduledAction(ctx context.Context, id string) error
 
 	CreateActivity(ctx context.Context, activity *models.ScalingActivity) error
-	ListActivities(ctx context.Context, name string) ([]*models.ScalingActivity, error)
+	ListActivities(ctx context.Context, name string, limit int) ([]*models.ScalingActivity, error)
 
 	Close() error
 }

@@ -139,27 +139,24 @@ func (s *BadgerStorage) ListGroups(ctx context.Context) ([]*models.Group, error)
 	return groups, err
 }
 
-func (s *BadgerStorage) CreatePolicy(ctx context.Context, id string) (*models.ScalingPolicy, error) {
-	var policy models.ScalingPolicy
-	err := s.db.View(func(txn *badger.Txn) error {
-		item, err := txn.Get(PolicyKey(id))
+func (s *BadgerStorage) CreatePolicy(ctx context.Context, policy *models.ScalingPolicy) error {
+	return s.db.Update(func(txn *badger.Txn) error {
+		key := PolicyKey(policy.ID)
+
+		_, err := txn.Get(key)
+		if err == nil {
+			return fmt.Errorf("policy already exists: %s", policy.ID)
+		}
+		if err != badger.ErrKeyNotFound {
+			return err
+		}
+
+		data, err := Marshal(policy)
 		if err != nil {
 			return err
 		}
-		return item.Value(func(val []byte) error {
-			return Unmarshal(val, &policy)
-		})
+		return txn.Set(key, data)
 	})
-
-	if err == badger.ErrKeyNotFound {
-		return nil, fmt.Errorf("policy not found: %s", id)
-	}
-
-	if err != nil {
-		return nil, err
-	}
-
-	return &policy, nil
 }
 
 func (s *BadgerStorage) GetPolicy(ctx context.Context, id string) (*models.ScalingPolicy, error) {
@@ -182,7 +179,7 @@ func (s *BadgerStorage) GetPolicy(ctx context.Context, id string) (*models.Scali
 	return &policy, nil
 }
 
-func (s *BadgerStorage) ListPolicies(ctx context.Context) ([]*models.ScalingPolicy, error) {
+func (s *BadgerStorage) ListPolicies(ctx context.Context, groupName string) ([]*models.ScalingPolicy, error) {
 	var policies []*models.ScalingPolicy
 	err := s.db.View(func(txn *badger.Txn) error {
 		opts := badger.DefaultIteratorOptions
@@ -198,7 +195,9 @@ func (s *BadgerStorage) ListPolicies(ctx context.Context) ([]*models.ScalingPoli
 				if err := Unmarshal(val, &policy); err != nil {
 					return err
 				}
-				policies = append(policies, &policy)
+				if policy.GroupName == groupName {
+					policies = append(policies, &policy)
+				}
 				return nil
 			})
 			if err != nil {
